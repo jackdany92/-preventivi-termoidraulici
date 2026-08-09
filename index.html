@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Preventivi Termo-Idraulici</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#111827;color:white;padding:20px 16px}
+header h1{margin:0;font-size:23px}
+header p{margin:5px 0 0;color:#9ca3af;font-size:13px}
+main{max-width:700px;margin:auto;padding:12px 14px 80px}
+.card{background:white;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px #00000010}
+h2{font-size:18px;margin:0 0 12px}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 5px}
+input,textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:white}
+textarea{min-height:90px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:700}
+.primary{background:#111827;color:white;width:100%}
+.secondary{background:#e5e7eb;color:#111827}
+.danger{background:#fee2e2;color:#991b1b}
+.item{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px}
+.itemhead{display:flex;gap:8px}
+.itemhead input{flex:1}
+.total{text-align:right;font-size:24px;font-weight:800;margin-top:4px}
+.small{font-size:13px;color:#6b7280}
+.saved{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:12px 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+@media(max-width:430px){
+.row,.actions{grid-template-columns:1fr}
+}
+
+@media print{
+header,.no-print{display:none!important}
+body{background:white}
+.card{box-shadow:none;border:1px solid #ddd}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Preventivi Termo-Idraulici</h1>
+<p>V1 • Preventivi rapidi da iPhone</p>
+</header>
+
+<main>
+
+<section class="card">
+<h2>👤 Cliente</h2>
+
+<label>Nome e cognome</label>
+<input id="cliente" placeholder="Mario Rossi">
+
+<div class="row">
+<div>
+<label>Telefono</label>
+<input id="telefono" type="tel" placeholder="333 1234567">
+</div>
+
+<div>
+<label>Data</label>
+<input id="data" type="date">
+</div>
+</div>
+
+<label>Indirizzo / luogo lavori</label>
+<input id="indirizzo" placeholder="Via, città...">
+</section>
+
+
+<section class="card">
+
+<h2>🔧 Lavorazioni e materiali</h2>
+
+<div id="items"></div>
+
+<button class="secondary no-print" style="width:100%" onclick="aggiungiVoce()">
++ Aggiungi voce
+</button>
+
+</section>
+
+
+<section class="card">
+
+<h2>💶 Riepilogo</h2>
+
+<div class="row">
+
+<div>
+<label>Manodopera (€)</label>
+<input id="manodopera" type="number" min="0" step="0.01" value="0" oninput="calcola()">
+</div>
+
+<div>
+<label>Trasferta (€)</label>
+<input id="trasferta" type="number" min="0" step="0.01" value="0" oninput="calcola()">
+</div>
+
+</div>
+
+<label>IVA (%)</label>
+<input id="iva" type="number" min="0" step="0.1" value="22" oninput="calcola()">
+
+<br>
+
+<div class="small">Imponibile</div>
+<div id="imponibile" class="total">€ 0,00</div>
+
+<div class="small">IVA</div>
+<div id="ivaTotale" class="total">€ 0,00</div>
+
+<div class="small">TOTALE PREVENTIVO</div>
+<div id="totale" class="total">€ 0,00</div>
+
+</section>
+
+
+<section class="card">
+
+<h2>📝 Note</h2>
+
+<textarea id="note" placeholder="Validità del preventivo, esclusioni, tempi di lavoro, garanzia..."></textarea>
+
+</section>
+
+
+<section class="card no-print">
+
+<div class="actions">
+
+<button class="primary" onclick="salvaPreventivo()">
+💾 Salva
+</button>
+
+<button class="secondary" onclick="window.print()">
+📄 PDF / Stampa
+</button>
+
+</div>
+
+<button class="danger" style="width:100%;margin-top:10px" onclick="nuovoPreventivo()">
++ Nuovo preventivo
+</button>
+
+</section>
+
+
+<section class="card no-print">
+
+<h2>📚 Preventivi salvati</h2>
+
+<div id="salvati"></div>
+
+</section>
+
+</main>
+
+
+<script>
+
+let voci=[];
+
+
+function euro(numero){
+return new Intl.NumberFormat("it-IT",{
+style:"currency",
+currency:"EUR"
+}).format(numero||0);
+}
+
+
+function sicuro(testo){
+return String(testo||"")
+.replaceAll("&","&amp;")
+.replaceAll("<","&lt;")
+.replaceAll(">","&gt;")
+.replaceAll('"',"&quot;");
+}
+
+
+function aggiungiVoce(descrizione="",quantita=1,prezzo=0){
+
+voci.push({
+descrizione:descrizione,
+quantita:quantita,
+prezzo:prezzo
+});
+
+mostraVoci();
+}
+
+
+function mostraVoci(){
+
+const contenitore=document.getElementById("items");
+
+contenitore.innerHTML="";
+
+voci.forEach((voce,index)=>{
+
+const div=document.createElement("div");
+
+div.className="item";
+
+div.innerHTML=`
+
+<div class="itemhead">
+
+<input
+placeholder="Descrizione"
+value="${sicuro(voce.descrizione)}"
+oninput="voci[${index}].descrizione=this.value">
+
+<button
+class="danger"
+onclick="rimuoviVoce(${index})">
+×
+</button>
+
+</div>
+
+<div class="row">
+
+<div>
+
+<label>Quantità</label>
+
+<input
+type="number"
+min="0"
+step="0.01"
+value="${voce.quantita}"
+oninput="voci[${index}].quantita=parseFloat(this.value)||0;calcola()">
+
+</div>
+
+<div>
+
+<label>Prezzo unitario (€)</label>
+
+<input
+type="number"
+min="0"
+step="0.01"
+value="${voce.prezzo}"
+oninput="voci[${index}].prezzo=parseFloat(this.value)||0;calcola()">
+
+</div>
+
+</div>
+`;
+
+contenitore.appendChild(div);
+
+});
+
+calcola();
+
+}
+
+
+function rimuoviVoce(index){
+
+voci.splice(index,1);
+
+mostraVoci();
+
+}
+
+
+function calcola(){
+
+let materiali=0;
+
+voci.forEach(voce=>{
+materiali += (Number(voce.quantita)||0)*(Number(voce.prezzo)||0);
+});
+
+const lavoro=Number(document.getElementById("manodopera").value)||0;
+const trasferta=Number(document.getElementById("trasferta").value)||0;
+const percentuale=Number(document.getElementById("iva").value)||0;
+
+const imponibile=materiali+lavoro+trasferta;
+
+const iva=imponibile*percentuale/100;
+
+const totale=imponibile+iva;
+
+document.getElementById("imponibile").textContent=euro(imponibile);
+document.getElementById("ivaTotale").textContent=euro(iva);
+document.getElementById("totale").textContent=euro(totale);
+
+return totale;
+
+}
+
+
+function datiPreventivo(){
+
+return {
+
+id:Date.now(),
+
+cliente:document.getElementById("cliente").value,
+
+telefono:document.getElementById("telefono").value,
+
+data:document.getElementById("data").value,
+
+indirizzo:document.getElementById("indirizzo").value,
+
+voci:voci,
+
+manodopera:Number(document.getElementById("manodopera").value)||0,
+
+trasferta:Number(document.getElementById("trasferta").value)||0,
+
+iva:Number(document.getElementById("iva").value)||0,
+
+note:document.getElementById("note").value,
+
+totale:calcola()
+
+};
+
+}
+
+
+function salvaPreventivo(){
+
+const preventivo=datiPreventivo();
+
+let elenco=JSON.parse(
+localStorage.getItem("preventiviTermoidraulici")||"[]"
+);
+
+elenco.unshift(preventivo);
+
+localStorage.setItem(
+"preventiviTermoidraulici",
+JSON.stringify(elenco)
+);
+
+mostraSalvati();
+
+alert("Preventivo salvato correttamente!");
+
+}
+
+
+function mostraSalvati(){
+
+const contenitore=document.getElementById("salvati");
+
+const elenco=JSON.parse(
+localStorage.getItem("preventiviTermoidraulici")||"[]"
+);
+
+if(elenco.length===0){
+
+contenitore.innerHTML=
+'<div class="small">Nessun preventivo salvato.</div>';
+
+return;
+
+}
+
+contenitore.innerHTML="";
+
+elenco.forEach(preventivo=>{
+
+const div=document.createElement("div");
+
+div.className="saved";
+
+div.innerHTML=`
+
+<div>
+
+<strong>${sicuro(preventivo.cliente||"Senza nome")}</strong>
+
+<div class="small">
+${preventivo.data||""} • ${euro(preventivo.totale)}
+</div>
+
+</div>
+
+<button
+class="secondary"
+onclick="caricaPreventivo(${preventivo.id})">
+Apri
+</button>
+
+`;
+
+contenitore.appendChild(div);
+
+});
+
+}
+
+
+function caricaPreventivo(id){
+
+const elenco=JSON.parse(
+localStorage.getItem("preventiviTermoidraulici")||"[]"
+);
+
+const p=elenco.find(x=>x.id===id);
+
+if(!p)return;
+
+document.getElementById("cliente").value=p.cliente||"";
+document.getElementById("telefono").value=p.telefono||"";
+document.getElementById("data").value=p.data||"";
+document.getElementById("indirizzo").value=p.indirizzo||"";
+
+voci=p.voci||[];
+
+document.getElementById("manodopera").value=p.manodopera||0;
+document.getElementById("trasferta").value=p.trasferta||0;
+document.getElementById("iva").value=p.iva??22;
+document.getElementById("note").value=p.note||"";
+
+mostraVoci();
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+
+function nuovoPreventivo(){
+
+if(!confirm("Creare un nuovo preventivo?"))return;
+
+document.getElementById("cliente").value="";
+document.getElementById("telefono").value="";
+document.getElementById("indirizzo").value="";
+document.getElementById("note").value="";
+
+document.getElementById("data").value=
+new Date().toISOString().slice(0,10);
+
+document.getElementById("manodopera").value=0;
+document.getElementById("trasferta").value=0;
+document.getElementById("iva").value=22;
+
+voci=[];
+
+aggiungiVoce();
+
+}
+
+
+document.getElementById("data").value=
+new Date().toISOString().slice(0,10);
+
+aggiungiVoce();
+
+mostraSalvati();
+
+</script>
+
+</body>
+</html>
