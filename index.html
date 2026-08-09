@@ -357,54 +357,55 @@ alert("Preventivo salvato correttamente!");
 
 
 function mostraSalvati(){
-
 const contenitore=document.getElementById("salvati");
-
 const elenco=JSON.parse(
 localStorage.getItem("preventiviTermoidraulici")||"[]"
 );
-
 if(elenco.length===0){
-
 contenitore.innerHTML=
 '<div class="small">Nessun preventivo salvato.</div>';
-
 return;
-
 }
-
 contenitore.innerHTML="";
-
 elenco.forEach(preventivo=>{
-
 const div=document.createElement("div");
-
 div.className="saved";
-
 div.innerHTML=`
-
 <div>
-
 <strong>${sicuro(preventivo.cliente||"Senza nome")}</strong>
-
 <div class="small">
 ${preventivo.data||""} • ${euro(preventivo.totale)}
 </div>
-
 </div>
-
+<div style="display:flex;gap:8px">
 <button
 class="secondary"
 onclick="caricaPreventivo(${preventivo.id})">
 Apri
 </button>
-
+<button
+class="danger"
+onclick="eliminaPreventivo(${preventivo.id})">
+🗑️
+</button>
+</div>
 `;
-
 contenitore.appendChild(div);
-
 });
+}
 
+  function eliminaPreventivo(id){
+if(!confirm("Sei sicuro di voler eliminare questo preventivo?"))return;
+let elenco=JSON.parse(
+localStorage.getItem("preventiviTermoidraulici")||"[]"
+);
+elenco=elenco.filter(preventivo=>preventivo.id!==id);
+localStorage.setItem(
+"preventiviTermoidraulici",
+JSON.stringify(elenco)
+);
+mostraSalvati();
+alert("Preventivo eliminato.");
 }
 
 
