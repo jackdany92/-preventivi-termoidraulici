@@ -35,14 +35,13 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 .row,.actions{grid-template-columns:1fr}
 }
 
-/* --- STILI DEDICATI ESCLUSIVAMENTE AL PDF / STAMPA --- */
-@media print {
-  body { background: white !important; color: black !important; }
+/* Stampa pulita mantenendo la grafica dell'app */
+@media print{
   header, .no-print, button { display: none !important; }
-  main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-  .card { box-shadow: none !important; border: none !important; padding: 10px 0 !important; margin-bottom: 10px !important; }
-  input, textarea { border: none !important; padding: 0 !important; background: transparent !important; font-size: 15px !important; }
-  textarea { min-height: auto !important; }
+  body { background: white !important; }
+  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+  .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
+  input, textarea { border: 1px solid #d1d5db !important; }
 }
 </style>
 </head>
@@ -144,7 +143,7 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 💾 Salva
 </button>
 
-<button class="secondary" onclick="stampaPDF()">
+<button class="secondary" onclick="stampaApp()">
 📄 PDF / Stampa
 </button>
 
@@ -467,8 +466,11 @@ aggiungiVoce();
 
 }
 
-function stampaPDF(){
-  window.print();
+// Funzione con setTimeout per garantire l'esecuzione su Safari iOS
+function stampaApp(){
+  setTimeout(function(){
+    window.print();
+  }, 100);
 }
 
 
@@ -483,3 +485,4 @@ mostraSalvati();
 
 </body>
 </html>
+
