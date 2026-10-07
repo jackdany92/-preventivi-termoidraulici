@@ -35,7 +35,6 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 .row,.actions{grid-template-columns:1fr}
 }
 
-/* Stampa pulita mantenendo la grafica dell'app */
 @media print{
   header, .no-print, button { display: none !important; }
   body { background: white !important; }
@@ -466,13 +465,48 @@ aggiungiVoce();
 
 }
 
-// Funzione con setTimeout per garantire l'esecuzione su Safari iOS
+// Funzione universale che rileva se l'utente è nell'App salvata sulla Home di iOS
 function stampaApp(){
-  setTimeout(function(){
+  // Se aperta da Safari normale, usa la finestra di stampa standard
+  if (!window.navigator.standalone) {
     window.print();
-  }, 100);
-}
+    return;
+  }
 
+  // Se aperta come Web App salvata sulla Schermata Home di iOS
+  const data = datiPreventivo();
+  let htmlContenuto = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preventivo - ${sicuro(data.cliente)}</title><style>body{font-family:-apple-system,sans-serif;padding:20px;color:#111827;} .card{border:1px solid #ddd;border-radius:12px;padding:12px;margin-bottom:10px;} .total{font-weight:bold;font-size:20px;text-align:right;}</style></head><body>`;
+  htmlContenuto += `<h2>👤 Cliente: ${sicuro(data.cliente)}</h2><p>Tel: ${sicuro(data.telefono)} | Data: ${data.data}</p><p>Indirizzo: ${sicuro(data.indirizzo)}</p><hr><h3>🔧 Lavorazioni</h3>`;
+  
+  data.voci.forEach(v => {
+    if(v.descrizione) {
+      htmlContenuto += `<div class="card"><strong>${sicuro(v.descrizione)}</strong><br>Q.tà: ${v.quantita} • Prezzo: ${euro(v.prezzo)}</div>`;
+    }
+  });
+
+  htmlContenuto += `<hr><div class="total">Totale Imponibile: ${document.getElementById("imponibile").textContent}</div>`;
+  htmlContenuto += `<div class="total">IVA: ${document.getElementById("ivaTotale").textContent}</div>`;
+  htmlContenuto += `<div class="total" style="font-size:24px;">TOTALE: ${document.getElementById("totale").textContent}</div>`;
+  
+  if(data.note) {
+    htmlContenuto += `<hr><h4>📝 Note</h4><p>${sicuro(data.note)}</p>`;
+  }
+  
+  htmlContenuto += `</body></html>`;
+
+  const file = new File([htmlContenuto], `Preventivo_${(data.cliente || "Cliente").replace(/[^a-zA-Z0-9]/g, "_")}.html`, { type: 'text/html' });
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: 'Preventivo',
+      text: 'Ecco il preventivo generato.'
+    }).catch(() => {});
+  } else {
+    // Fallback automatico
+    window.print();
+  }
+}
 
 document.getElementById("data").value=
 new Date().toISOString().slice(0,10);
@@ -485,4 +519,5 @@ mostraSalvati();
 
 </body>
 </html>
+
 
