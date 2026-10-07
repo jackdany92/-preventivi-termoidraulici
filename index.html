@@ -34,14 +34,6 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 @media(max-width:430px){
 .row,.actions{grid-template-columns:1fr}
 }
-
-@media print{
-  header, .no-print, button { display: none !important; }
-  body { background: white !important; }
-  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-  .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
-  input, textarea { border: none !important; background: transparent !important; }
-}
 </style>
 </head>
 
@@ -83,7 +75,7 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 
 <div id="items"></div>
 
-<button class="secondary no-print" style="width:100%" onclick="aggiungiVoce()">
+<button class="secondary" style="width:100%" onclick="aggiungiVoce()">
 + Aggiungi voce
 </button>
 
@@ -134,7 +126,7 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 </section>
 
 
-<section class="card no-print">
+<section class="card">
 
 <div class="actions">
 
@@ -142,8 +134,8 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 💾 Salva
 </button>
 
-<button class="secondary" onclick="condividiOStampa()">
-📄 Salva / Condividi PDF
+<button class="secondary" onclick="salvaHTML()">
+📄 Salva HTML / Condividi
 </button>
 
 </div>
@@ -155,7 +147,7 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 </section>
 
 
-<section class="card no-print">
+<section class="card">
 
 <h2>📚 Preventivi salvati</h2>
 
@@ -222,7 +214,7 @@ value="${sicuro(voce.descrizione)}"
 oninput="voci[${index}].descrizione=this.value">
 
 <button
-class="danger no-print"
+class="danger"
 onclick="rimuoviVoce(${index})">
 ×
 </button>
@@ -465,21 +457,96 @@ aggiungiVoce();
 
 }
 
-// Gestione della condivisione nativa iOS (funziona direttamente dall'app sulla Home)
-function condividiOStampa(){
+
+// Generazione e condivisione diretta del file .html
+async function salvaHTML(){
   const data = datiPreventivo();
-  const testo = `PREVENTIVO TERMO-IDRAULICO\nCliente: ${data.cliente || 'N/D'}\nData: ${data.data}\nTotale: ${document.getElementById("totale").textContent}`;
   
-  if (navigator.share) {
-    navigator.share({
-      title: 'Preventivo ' + (data.cliente || ''),
-      text: testo,
-      url: window.location.href
-    }).catch(() => {});
+  let righe = '';
+  data.voci.forEach(v => {
+    if(v.descrizione) {
+      const tot = (Number(v.quantita)||0)*(Number(v.prezzo)||0);
+      righe += `<tr><td>${sicuro(v.descrizione)}</td><td style="text-align:center">${v.quantita}</td><td style="text-align:right">${euro(v.prezzo)}</td><td style="text-align:right">${euro(tot)}</td></tr>`;
+    }
+  });
+
+  const contenuto = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preventivo_${sicuro(data.cliente)}</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; color: #111827; max-width: 700px; margin: auto; }
+    h1 { font-size: 24px; margin-bottom: 5px; }
+    .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 20px; background: #f9fafb; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px 12px; font-size: 14px; }
+    th { background-color: #f3f4f6; text-align: left; }
+    .totali { margin-top: 20px; text-align: right; font-size: 16px; }
+    .totali h2 { margin: 5px 0; font-size: 22px; }
+  </style>
+</head>
+<body>
+  <h1>PREVENTIVO</h1>
+  <p>Data: ${data.data}</p>
+  
+  <div class="box">
+    <strong>Cliente:</strong> ${sicuro(data.cliente) || '-'}<br>
+    <strong>Telefono:</strong> ${sicuro(data.telefono) || '-'}<br>
+    <strong>Indirizzo:</strong> ${sicuro(data.indirizzo) || '-'}
+  </div>
+
+  <h3>Lavorazioni e materiali</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Descrizione</th>
+        <th style="text-align:center">Q.tà</th>
+        <th style="text-align:right">Prezzo Unit.</th>
+        <th style="text-align:right">Totale</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${righe}
+      ${data.manodopera > 0 ? `<tr><td>Manodopera</td><td style="text-align:center">1</td><td style="text-align:right">${euro(data.manodopera)}</td><td style="text-align:right">${euro(data.manodopera)}</td></tr>` : ''}
+      ${data.trasferta > 0 ? `<tr><td>Trasferta</td><td style="text-align:center">1</td><td style="text-align:right">${euro(data.trasferta)}</td><td style="text-align:right">${euro(data.trasferta)}</td></tr>` : ''}
+    </tbody>
+  </table>
+
+  <div class="totali">
+    <p>Imponibile: ${document.getElementById("imponibile").textContent}</p>
+    <p>IVA (${data.iva}%): ${document.getElementById("ivaTotale").textContent}</p>
+    <h2>TOTALE: ${document.getElementById("totale").textContent}</h2>
+  </div>
+
+  ${data.note ? `<div class="box" style="margin-top:20px;"><strong>Note:</strong><p style="white-space:pre-wrap;">${sicuro(data.note)}</p></div>` : ''}
+</body>
+</html>`;
+
+  const nomePulito = (data.cliente || "Cliente").replace(/[^a-zA-Z0-9]/g, "_");
+  const nomeFile = `Preventivo_${nomePulito}.html`;
+  
+  const file = new File([contenuto], nomeFile, { type: 'text/html' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'Preventivo ' + (data.cliente || ''),
+        text: 'Ecco il preventivo salvato.'
+      });
+    } catch(e) {}
   } else {
-    window.print();
+    // Scaricamento standard se non si usa il menu nativo
+    const blob = new Blob([contenuto], { type: "text/html" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = nomeFile;
+    link.click();
   }
 }
+
 
 document.getElementById("data").value=
 new Date().toISOString().slice(0,10);
