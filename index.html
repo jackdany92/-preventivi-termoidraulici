@@ -35,34 +35,12 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 .row,.actions{grid-template-columns:1fr}
 }
 
-/* FORMATTAZIONE NATIVA DI STAMPA iOS / SAFARI */
-@media print {
-  header, .no-print, button, .actions, .danger, #salvati, section.card:last-child { 
-    display: none !important; 
-  }
-  body { 
-    background: white !important; 
-    color: black !important;
-  }
-  main { 
-    max-width: 100% !important; 
-    padding: 0 !important; 
-    margin: 0 !important; 
-  }
-  .card { 
-    box-shadow: none !important; 
-    border: none !important; 
-    padding: 0 !important; 
-    margin-bottom: 20px !important; 
-    page-break-inside: avoid;
-  }
-  input, textarea { 
-    border: none !important; 
-    padding: 0 !important; 
-    background: transparent !important; 
-    font-size: 15px !important; 
-    resize: none !important;
-  }
+@media print{
+  header, .no-print, button { display: none !important; }
+  body { background: white !important; }
+  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+  .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
+  input, textarea { border: none !important; background: transparent !important; }
 }
 </style>
 </head>
@@ -79,22 +57,22 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 <section class="card">
 <h2>👤 Cliente</h2>
 
-<label class="no-print">Nome e cognome</label>
+<label>Nome e cognome</label>
 <input id="cliente" placeholder="Mario Rossi">
 
 <div class="row">
 <div>
-<label class="no-print">Telefono</label>
+<label>Telefono</label>
 <input id="telefono" type="tel" placeholder="333 1234567">
 </div>
 
 <div>
-<label class="no-print">Data</label>
+<label>Data</label>
 <input id="data" type="date">
 </div>
 </div>
 
-<label class="no-print">Indirizzo / luogo lavori</label>
+<label>Indirizzo / luogo lavori</label>
 <input id="indirizzo" placeholder="Via, città...">
 </section>
 
@@ -119,18 +97,18 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 <div class="row">
 
 <div>
-<label class="no-print">Manodopera (€)</label>
+<label>Manodopera (€)</label>
 <input id="manodopera" type="number" min="0" step="0.01" value="0" oninput="calcola()">
 </div>
 
 <div>
-<label class="no-print">Trasferta (€)</label>
+<label>Trasferta (€)</label>
 <input id="trasferta" type="number" min="0" step="0.01" value="0" oninput="calcola()">
 </div>
 
 </div>
 
-<label class="no-print">IVA (%)</label>
+<label>IVA (%)</label>
 <input id="iva" type="number" min="0" step="0.1" value="22" oninput="calcola()">
 
 <br>
@@ -164,8 +142,8 @@ button{border:0;border-radius:11px;padding:13px 15px;font-size:16px;font-weight:
 💾 Salva
 </button>
 
-<button class="secondary" onclick="stampaApp()">
-📄 PDF / Stampa
+<button class="secondary" onclick="condividiOStampa()">
+📄 Salva / Condividi PDF
 </button>
 
 </div>
@@ -255,7 +233,7 @@ onclick="rimuoviVoce(${index})">
 
 <div>
 
-<label class="no-print">Quantità</label>
+<label>Quantità</label>
 
 <input
 type="number"
@@ -268,7 +246,7 @@ oninput="voci[${index}].quantita=parseFloat(this.value)||0;calcola()">
 
 <div>
 
-<label class="no-print">Prezzo unitario (€)</label>
+<label>Prezzo unitario (€)</label>
 
 <input
 type="number"
@@ -487,10 +465,21 @@ aggiungiVoce();
 
 }
 
-function stampaApp(){
-  window.print();
+// Gestione della condivisione nativa iOS (funziona direttamente dall'app sulla Home)
+function condividiOStampa(){
+  const data = datiPreventivo();
+  const testo = `PREVENTIVO TERMO-IDRAULICO\nCliente: ${data.cliente || 'N/D'}\nData: ${data.data}\nTotale: ${document.getElementById("totale").textContent}`;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: 'Preventivo ' + (data.cliente || ''),
+      text: testo,
+      url: window.location.href
+    }).catch(() => {});
+  } else {
+    window.print();
+  }
 }
-
 
 document.getElementById("data").value=
 new Date().toISOString().slice(0,10);
